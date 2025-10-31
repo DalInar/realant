@@ -1,7 +1,7 @@
 # Licensed under MIT licence, see LICENSE for details.
 # Copyright Ote Robotics Ltd. 2020
 import math
-
+import random
 import zmq
 import time
 
@@ -34,7 +34,6 @@ def standup(pause: float):
 
 def twist(angle: float, pause: float):
     motor_position = int(512+(angle/90)*(512-224))
-    print(motor_position)
     motor_position_str = f"s2 {motor_position} s4 {motor_position} s6 {motor_position} s8 {motor_position}\n"
     #sock.send_multipart([b"cmd", b"s2 224 s4 224 s6 224 s8 224\n"])
     sock.send_multipart([b"cmd", bytes(motor_position_str, "utf-8")])
@@ -86,7 +85,6 @@ def spin_dance(slant_mag: int=144):
     slant_angle = 0
     slant_increase = 20
     for i in range(0, 100):
-        print(slant_angle)
         slant(slant_angle, pause=0.1, slant_mag=slant_mag)
         slant_angle += slant_increase
 
@@ -104,21 +102,27 @@ def twist_dance(angle_mag: float, pause_tempo: float):
 time.sleep(0.1)
 sock.send_multipart([b"cmd", b"attach_servos\n"])
 time.sleep(0.1)
+standup(2)
 
-#standup(1)
-#point(0, 1)
-#wiggle_leg(0, 2, 1)
-standup(1)
-twist_dance(40, 0.75)
-twist_dance(20, 0.25)
-#slant(0, 1, 80)
-spin_dance(slant_mag=80)
-#spin_dance()
+try:
+    while True:
+        standup(0.1)
 
-standup(1)
-#sock.send_multipart([b"cmd", b"reset\n"])
-time.sleep(1)
-sock.send_multipart([b"cmd", b"detach_servos\n"])
+        for i in range(0, 3):
+            k = random.randint(0,3)
+            if k==0:
+                twist_dance(40, 0.75)
+            elif k==1:
+                twist_dance(20, 0.25)
+            elif k==2:
+                spin_dance(slant_mag=80)
+        standup(0.1)
+        pause = 10*random.random()+3
+        time.sleep(pause)
 
-sock.close()
-ctx.term()
+except KeyboardInterrupt:
+    standup(0.2)
+    sock.send_multipart([b"cmd", b"detach_servos\n"])
+    sock.close()
+    ctx.term()
+    print("Ending the dance")
